@@ -1,0 +1,10 @@
+<window theme="main" >
+  <edit name="url" text="https://z.zlg.cn/" x="10" y="5" w="700" h="30"/>
+  <button name="go" text="Go" x="730" y="5" w="40" h="30"/>
+  <button name="back" text="<" x="780" y="5" w="40" h="30"/>
+  <button name="reload" text="R" x="830" y="5" w="40" h="30"/>
+  <button name="forward" text=">" x="880" y="5" w="40" h="30"/>
+  <button name="close" text="Close" x="930" y="5" w="60" h="30"/>
+
+  <web_view name="webview" w="100%" h="-40" x="0" y="40" />
+</window>

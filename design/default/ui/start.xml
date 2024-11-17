@@ -1,0 +1,4 @@
+<window theme="main" >
+  <button name="webview" text="Open WebView" x="c" y="m" w="180" h="30"/>
+  <button name="quit" text="Quit" x="c" y="m:60" w="180" h="30"/>
+</window>

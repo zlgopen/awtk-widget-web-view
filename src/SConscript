@@ -1,0 +1,41 @@
+import os
+import sys
+import platform
+
+OS_NAME = platform.system();
+LIB_DIR=os.environ['LIB_DIR'];
+BIN_DIR=os.environ['BIN_DIR'];
+
+env=DefaultEnvironment().Clone()
+SOURCES = [
+  "web_view_register.c",
+  "web_view/web_view.c"
+]
+
+EXPORT_DEF=''
+if OS_NAME == 'Windows' :
+  if os.environ['TOOLS_NAME'] == '' :
+    EXPORT_DEF = ' /DEF:"src/web_view.def" '
+  elif os.environ['TOOLS_NAME'] == 'mingw' :
+    EXPORT_DEF = ' "src/web_view.def" '
+  SOURCES += ["web_view/webview_os_window_windows.c"]
+elif OS_NAME == 'Darwin': 
+  SOURCES += ["web_view/webview_os_window_macos.m"]
+else:
+  pkg_config = 'pkg-config'
+  pkg_name = 'webkit2gtk-4.0 gtk+-3.0'
+  cflags = os.popen(f'{pkg_config} --cflags {pkg_name}').read().strip()
+  libs = os.popen(f'{pkg_config} --libs {pkg_name}').read().strip()
+  APP_CXXFLAGS = cflags + " -DSDL_VIDEO_DRIVER_X11 "
+  APP_CFLAGS= cflags + " -DSDL_VIDEO_DRIVER_X11 "
+  env['CFLAGS'] += APP_CFLAGS
+  env['CXXFLAGS'] += APP_CXXFLAGS
+  env['LINKFLAGS'] += libs
+  SOURCES += ["web_view/webview_os_window_linux.c"]
+
+if 'BUILD_SHARED' in os.environ and os.environ['BUILD_SHARED'] == 'True':
+  LINKFLAGS=env['LINKFLAGS'] + EXPORT_DEF 
+  env.SharedLibrary(os.path.join(BIN_DIR, 'web_view'), SOURCES, LINKFLAGS=LINKFLAGS);
+else:
+  env.Library(os.path.join(LIB_DIR, 'web_view'), SOURCES);
+
