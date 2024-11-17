@@ -7,6 +7,7 @@ awtk-widget-web-view 是通过 [webview](https://github.com/webview/webview) 提
 ![](docs/images/ui.png)
 
 ## 特性
+
 * 支持显示 web 页面。
 * 支持显示本地文件。
 * 支持 C/C++调用 JavaScript。
@@ -71,6 +72,18 @@ scons
 
 ```
 ./bin/demo
+```
+
+* MacOS 需要设置环境变量：
+
+```
+export DYLD_LIBRARY_PATH=bin
+```
+
+* Ubuntu 需要设置环境变量：
+
+```
+export GDK_BACKEND=x11
 ```
 
 ## 相关项目
