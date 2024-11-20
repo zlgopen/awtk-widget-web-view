@@ -11,7 +11,7 @@ awtk-widget-web-view 是通过 [webview](https://github.com/webview/webview) 提
 * 支持显示 web 页面。
 * 支持显示本地文件。
 * 支持 C/C++调用 JavaScript。
-* 支持 JavaScrip 调用 C/C++函数 。
+* 支持 JavaScript 调用 C/C++函数 。
 * 支持 Windows、MacOS、Ubuntu。
   
 ## 准备
