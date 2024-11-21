@@ -69,8 +69,13 @@ typedef struct _web_view_t {
    */
   char* html;
 
-  /*private*/
+  /**
+   * @property {void*} impl
+   * impl(可强制转换成webview_t)。
+   */
   void* impl;
+
+  /*private*/
   web_view_on_url_changed_t on_url_changed;
   void* on_url_changed_ctx;
 } web_view_t;

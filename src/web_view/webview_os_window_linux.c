@@ -22,9 +22,11 @@ static ret_t web_view_on_timer(const timer_info_t* timer) {
   return RET_REPEAT;
 }
 
-static ret_t sdl_window_set_child(SDL_Window* parent, webview_os_window_t os_window, int x, int y,
+static ret_t sdl_window_set_child(widget_t* widget, webview_os_window_t os_window, int x, int y,
                                   int w, int h) {
   SDL_SysWMinfo wmInfo;
+  SDL_Window* parent = (SDL_Window*)(widget_get_native_window(widget)->handle);
+
   SDL_VERSION(&wmInfo.version);
   SDL_GetWindowWMInfo(parent, &wmInfo);
   Window parent_win = wmInfo.info.x11.window;
@@ -41,8 +43,10 @@ static ret_t sdl_window_set_child(SDL_Window* parent, webview_os_window_t os_win
   return RET_OK;
 }
 
-webview_os_window_t webview_os_window_create(SDL_Window* parent, int x, int y, int w, int h) {
+webview_os_window_t webview_os_window_create(widget_t* widget, int x, int y, int w, int h) {
   GtkWidget* gtk_window = gtk_window_new(GTK_WINDOW_POPUP);
+  SDL_Window* parent = (SDL_Window*)(widget_get_native_window(widget)->handle);
+
   gtk_window_set_decorated(GTK_WINDOW(gtk_window), FALSE);
   gtk_window_move(GTK_WINDOW(gtk_window), x, y);
   gtk_window_resize(GTK_WINDOW(gtk_window), w, h);
@@ -59,9 +63,10 @@ webview_os_window_t webview_os_window_create(SDL_Window* parent, int x, int y, i
   return (webview_os_window_t)gtk_window;
 }
 
-void webview_os_window_move_resize(SDL_Window* parent, webview_os_window_t subwindow, int x, int y,
+void webview_os_window_move_resize(widget_t* widget, webview_os_window_t subwindow, int x, int y,
                                    int w, int h) {
   GtkWidget* gtk_window = GTK_WIDGET(subwindow);
+  SDL_Window* parent = (SDL_Window*)(widget_get_native_window(widget)->handle);
 
   gtk_window_move(GTK_WINDOW(gtk_window), x, y);
   gtk_window_resize(GTK_WINDOW(gtk_window), w, h);

@@ -51,8 +51,10 @@ static ret_t webview_os_window_init(HINSTANCE hInstance) {
   return RET_OK;
 }
 
-webview_os_window_t webview_os_window_create(SDL_Window* parent, int x, int y, int w, int h) {
+webview_os_window_t webview_os_window_create(widget_t* widget, int x, int y, int w, int h) {
   SDL_SysWMinfo wmInfo;
+  SDL_Window* parent = (SDL_Window*)(widget_get_native_window(widget)->handle);
+
   SDL_VERSION(&wmInfo.version);
   SDL_GetWindowWMInfo(parent, &wmInfo);
 
@@ -79,9 +81,10 @@ webview_os_window_t webview_os_window_create(SDL_Window* parent, int x, int y, i
   return (webview_os_window_t)hwndSub;
 }
 
-void webview_os_window_move_resize(SDL_Window* parent, webview_os_window_t subwindow, int x, int y,
+void webview_os_window_move_resize(widget_t* widget, webview_os_window_t subwindow, int x, int y,
                                    int w, int h) {
   HWND hwndSub = (HWND)subwindow;
+  SDL_Window* parent = (SDL_Window*)(widget_get_native_window(widget)->handle);
   float scale = system_info()->device_pixel_ratio;
 
   MoveWindow(hwndSub, x, y, w * scale, h * scale, TRUE);

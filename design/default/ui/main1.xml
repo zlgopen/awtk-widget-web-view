@@ -1,0 +1,7 @@
+<window theme="main" >
+  <button name="dialog" text="dialog" x="10" y="5" w="100" h="30" on:click="open('dialog1')"/>
+  <button name="window" text="window" x="120" y="5" w="100" h="30" on:click="open('window1')"/>
+  <button name="close" text="Close" x="230" y="5" w="60" h="30" on:click="close()"/>
+  
+  <web_view name="webview" w="100%" h="-40" x="0" y="40" url="https://z.zlg.cn/"/>
+</window>

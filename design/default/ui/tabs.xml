@@ -1,0 +1,19 @@
+<window >
+  <tab_button_group x="0" y="0" w="90%" h="30" compact="true" >
+    <tab_button text="General"/>
+    <tab_button text="Network" value="true" />
+    <tab_button text="Security"/>
+  </tab_button_group>
+  <pages x="0" y="32" w="90%" h="-60" value="1">
+    <view w="100%" h="100%">
+      <web_view name="webview" w="100%" h="100%" x="0" y="0" url="https://z.zlg.cn/"/>
+    </view>
+    <view w="100%" h="100%">
+      <web_view name="webview" w="100%" h="100%" x="0" y="0" url="https://z.zlg.cn/answer"/>
+    </view>
+    <view w="100%" h="100%">
+      <web_view name="webview" w="100%" h="100%" x="0" y="0" url="https://z.zlg.cn/article"/>
+    </view>
+  </pages>
+</window>
+

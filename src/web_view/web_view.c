@@ -46,6 +46,38 @@ static const char* s_hook_click =
     "  }); \n"
     "});\n";
 
+static ret_t web_view_on_window_to_background(void* ctx, event_t* e) {
+  widget_t* widget = WIDGET(ctx);
+  web_view_t* web_view = WEB_VIEW(widget);
+  return_value_if_fail(widget != NULL && web_view != NULL, RET_BAD_PARAMS);
+
+  if (web_view->impl != NULL) {
+    webview_t w = (webview_t)(web_view->impl);
+    widget_set_visible(widget, FALSE);
+    webview_os_window_t window =
+        (webview_os_window_t)webview_get_native_handle(w, WEBVIEW_NATIVE_HANDLE_KIND_UI_WINDOW);
+    webview_os_window_show(window, FALSE);
+  }
+
+  return RET_OK;
+}
+
+static ret_t web_view_on_window_to_foreground(void* ctx, event_t* e) {
+  widget_t* widget = WIDGET(ctx);
+  web_view_t* web_view = WEB_VIEW(widget);
+  return_value_if_fail(widget != NULL && web_view != NULL, RET_BAD_PARAMS);
+
+  if (web_view->impl != NULL) {
+    webview_t w = (webview_t)(web_view->impl);
+    widget_set_visible(widget, TRUE);
+    webview_os_window_t window =
+        (webview_os_window_t)webview_get_native_handle(w, WEBVIEW_NATIVE_HANDLE_KIND_UI_WINDOW);
+    webview_os_window_show(window, TRUE);
+  }
+
+  return RET_OK;
+}
+
 static void web_view_on_url_changed(const char* id, const char* req, void* arg) {
   /*req=["https://www.zlg.cn/index.html"] */
   char url[1024] = {0};
@@ -126,8 +158,14 @@ static ret_t web_view_set_prop(widget_t* widget, const char* name, const value_t
 }
 
 static ret_t web_view_on_destroy(widget_t* widget) {
+  widget_t* window = NULL;
   web_view_t* web_view = WEB_VIEW(widget);
   return_value_if_fail(widget != NULL && web_view != NULL, RET_BAD_PARAMS);
+
+  window = widget_get_window(widget);
+  if (window != NULL) {
+    widget_off_by_ctx(window, widget);
+  }
 
   web_view_destroy_impl(widget);
   TKMEM_FREE(web_view->url);
@@ -165,12 +203,11 @@ static ret_t web_view_move_resize_webview(widget_t* widget) {
   web_view_t* web_view = WEB_VIEW(widget);
   if (web_view->impl != NULL) {
     rect_t rect = {0, 0, 0, 0};
-    void* parent_window = widget_get_native_window(widget)->handle;
     webview_t w = (webview_t)(web_view->impl);
     void* os_window = webview_get_native_handle(w, WEBVIEW_NATIVE_HANDLE_KIND_UI_WINDOW);
 
     web_view_get_rect(widget, &rect);
-    webview_os_window_move_resize((SDL_Window*)parent_window, os_window, rect.x, rect.y, rect.w,
+    webview_os_window_move_resize(widget, os_window, rect.x, rect.y, rect.w,
                                   rect.h);
   }
 
@@ -197,12 +234,9 @@ static ret_t web_view_create_impl(widget_t* widget) {
   void* os_window = NULL;
   rect_t rect = {0, 0, 0, 0};
   web_view_t* web_view = WEB_VIEW(widget);
-  void* parent_window = widget_get_native_window(widget)->handle;
-  return_value_if_fail(parent_window != NULL, RET_BAD_PARAMS);
 
   web_view_get_rect(widget, &rect);
-  os_window =
-      webview_os_window_create((SDL_Window*)parent_window, rect.x, rect.y, rect.w, rect.h);
+  os_window = webview_os_window_create(widget, rect.x, rect.y, rect.w, rect.h);
 
   w = webview_create(0, os_window);
   webview_init(w, s_hook_click);
@@ -229,7 +263,12 @@ static ret_t web_view_on_event(widget_t* widget, event_t* e) {
 
   switch (e->type) {
     case EVT_WINDOW_OPEN: {
+      widget_t* window = widget_get_window(widget);
       web_view_create_impl(widget);
+      if (window != NULL) {
+        widget_on(window, EVT_WINDOW_TO_BACKGROUND, web_view_on_window_to_background, widget);
+        widget_on(window, EVT_WINDOW_TO_FOREGROUND, web_view_on_window_to_foreground, widget);
+      }
       break;
     }
     case EVT_MOVE_RESIZE:

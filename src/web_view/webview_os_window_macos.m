@@ -3,8 +3,10 @@
 #import <Cocoa/Cocoa.h>
 #include "webview_os_window.h"
 
-webview_os_window_t webview_os_window_create(SDL_Window* parent, int x, int y, int w, int h) {
+webview_os_window_t webview_os_window_create(widget_t* widget, int x, int y, int w, int h) {
     SDL_SysWMinfo info;
+    SDL_Window* parent = (SDL_Window*)(widget_get_native_window(widget)->handle);
+
     SDL_VERSION(&info.version);
     SDL_GetWindowWMInfo(parent, &info);
 
@@ -60,14 +62,20 @@ webview_os_window_t webview_os_window_create(SDL_Window* parent, int x, int y, i
                                                       object:parentWindow
                                                        queue:nil
                                                   usingBlock:^(NSNotification *note) {
-        [childWindow makeKeyAndOrderFront:nil];
+      if (widget->visible) {
+          [childWindow makeKeyAndOrderFront:nil];
+      } else {
+          [childWindow orderOut:nil];
+      }
     }];
     
     return (__bridge void*)childWindow; // 使用 __bridge 传递所有权
 }
 
-void webview_os_window_move_resize(SDL_Window* parent, webview_os_window_t subwindow, int x, int y, int w, int h) {
+void webview_os_window_move_resize(widget_t* widget, webview_os_window_t subwindow, int x, int y, int w, int h) {
     SDL_SysWMinfo info;
+    SDL_Window* parent = (SDL_Window*)(widget_get_native_window(widget)->handle);
+
     SDL_VERSION(&info.version);
     SDL_GetWindowWMInfo(parent, &info);
     NSWindow *childWindow = (__bridge NSWindow*)subwindow;
@@ -84,4 +92,15 @@ void webview_os_window_destroy(webview_os_window_t subwindow) {
     NSWindow *childWindow = (__bridge NSWindow*)subwindow;
     [[NSNotificationCenter defaultCenter] removeObserver:childWindow];
     [childWindow close];
+}
+
+void webview_os_window_show(webview_os_window_t subwindow, bool_t show) {
+    NSWindow *childWindow = (__bridge NSWindow*)subwindow;
+    if (show) {
+        [childWindow makeKeyAndOrderFront:nil];
+    } else {
+        [childWindow orderOut:nil];
+    }
+
+    log_debug("webview_os_window_show: %s\n", show ? "true" : "false");
 }
