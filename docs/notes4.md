@@ -6,7 +6,6 @@ Ubuntu 上实现 AWTK-WIDGET-WEB-VIEW 开始以为很简单，后来发现是最
 
 AWTK 在使用 Linux 的输入法时，链接了 GTK3，所以编译 webview 时也要链接 GTK3, 需要指定参数 WEBVIEW_WEBKITGTK_API="4.0"。
 
-```bash
 3rd/build_linux.sh
 
 ```
