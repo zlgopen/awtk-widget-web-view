@@ -81,6 +81,11 @@ webview_os_window_t webview_os_window_create(widget_t* widget, int x, int y, int
   return (webview_os_window_t)hwndSub;
 }
 
+void webview_os_window_show(webview_os_window_t subwindow, bool_t show) {
+  HWND hwndSub = (HWND)subwindow;
+  ShowWindow(hwndSub, show ? SW_SHOW : SW_HIDE);
+}
+
 void webview_os_window_move_resize(widget_t* widget, webview_os_window_t subwindow, int x, int y,
                                    int w, int h) {
   HWND hwndSub = (HWND)subwindow;
