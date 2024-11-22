@@ -1,10 +1,11 @@
 <window >
-  <tab_button_group x="0" y="0" w="90%" h="30" compact="true" >
-    <tab_button text="General"/>
-    <tab_button text="Network" value="true" />
-    <tab_button text="Security"/>
+  <tab_button_group x="0" y="0" w="100%" h="30" compact="true" >
+    <tab_button text="Page1"/>
+    <tab_button text="Page2" value="true" />
+    <tab_button text="Page3"/>
+    <tab_button text="Close"/>
   </tab_button_group>
-  <pages x="0" y="32" w="90%" h="-60" value="1">
+  <pages x="0" y="32" w="100%" h="-30" value="1">
     <view w="100%" h="100%">
       <web_view name="webview" w="100%" h="100%" x="0" y="0" url="https://z.zlg.cn/"/>
     </view>
@@ -13,6 +14,9 @@
     </view>
     <view w="100%" h="100%">
       <web_view name="webview" w="100%" h="100%" x="0" y="0" url="https://z.zlg.cn/article"/>
+    </view>
+    <view w="100%" h="100%">
+      <button text="Close" w="100" h="40" x="c" y="m" on:click="close()" />
     </view>
   </pages>
 </window>

@@ -23,6 +23,7 @@
 #include "tkc/mem.h"
 #include "tkc/utils.h"
 #include "base/timer.h"
+#include "widgets/pages.h"
 #include "base/window_manager.h"
 
 #include "web_view.h"
@@ -31,8 +32,8 @@
 static ret_t web_view_create_impl(widget_t* widget);
 static ret_t web_view_destroy_impl(widget_t* widget);
 
-static const char* s_hook_click =
-    "window.setInterval(function() {\n"
+static const char* s_webview_init_js =
+    "window.url_changed_timer_id = window.setInterval(function() {\n"
     "  window.on_url_changed(window.location.href);\n"
     "}, 1000);\n"
     "window.addEventListener('load', function() {\n"
@@ -46,36 +47,54 @@ static const char* s_hook_click =
     "  }); \n"
     "});\n";
 
-static ret_t web_view_on_window_to_background(void* ctx, event_t* e) {
-  widget_t* widget = WIDGET(ctx);
+static const char* s_webview_deinit_js = "clearInterval(window.url_changed_timer_id);";
+
+static ret_t web_view_set_active(widget_t* widget, bool_t value) {
   web_view_t* web_view = WEB_VIEW(widget);
   return_value_if_fail(widget != NULL && web_view != NULL, RET_BAD_PARAMS);
 
   if (web_view->impl != NULL) {
     webview_t w = (webview_t)(web_view->impl);
-    widget_set_visible(widget, FALSE);
+    widget_set_visible(widget, value);
     webview_os_window_t window =
         (webview_os_window_t)webview_get_native_handle(w, WEBVIEW_NATIVE_HANDLE_KIND_UI_WINDOW);
-    webview_os_window_show(window, FALSE);
+    webview_os_window_show(window, value);
   }
 
   return RET_OK;
 }
 
-static ret_t web_view_on_window_to_foreground(void* ctx, event_t* e) {
-  widget_t* widget = WIDGET(ctx);
-  web_view_t* web_view = WEB_VIEW(widget);
-  return_value_if_fail(widget != NULL && web_view != NULL, RET_BAD_PARAMS);
+static ret_t web_view_set_active_if_is_current_page(widget_t* widget) {  
+  widget_t* my_page = NULL;
+  widget_t* current_page = NULL;
+  widget_t* pages = widget_find_parent_by_type(widget, WIDGET_TYPE_PAGES);
+  return_value_if_fail(widget != NULL && pages != NULL, RET_BAD_PARAMS);
 
-  if (web_view->impl != NULL) {
-    webview_t w = (webview_t)(web_view->impl);
-    widget_set_visible(widget, TRUE);
-    webview_os_window_t window =
-        (webview_os_window_t)webview_get_native_handle(w, WEBVIEW_NATIVE_HANDLE_KIND_UI_WINDOW);
-    webview_os_window_show(window, TRUE);
+  my_page = widget->parent;
+  while (my_page != NULL && my_page->parent != pages) {
+    my_page = my_page->parent;
+  }
+
+  current_page = widget_get_child(pages, PAGES(pages)->active);
+  if (my_page == current_page) {
+    web_view_set_active(widget, TRUE);
+  } else {
+    web_view_set_active(widget, FALSE);
   }
 
   return RET_OK;
+}
+
+static ret_t web_view_on_pages_changed(void* ctx, event_t* e) {
+  return web_view_set_active_if_is_current_page(WIDGET(ctx));
+}
+
+static ret_t web_view_on_window_to_background(void* ctx, event_t* e) {
+  return web_view_set_active(WIDGET(ctx), FALSE);
+}
+
+static ret_t web_view_on_window_to_foreground(void* ctx, event_t* e) {
+  return web_view_set_active(WIDGET(ctx), TRUE);
 }
 
 static void web_view_on_url_changed(const char* id, const char* req, void* arg) {
@@ -167,7 +186,14 @@ static ret_t web_view_on_destroy(widget_t* widget) {
     widget_off_by_ctx(window, widget);
   }
 
-  web_view_destroy_impl(widget);
+  
+  if (web_view->impl != NULL) {
+    webview_t w = (webview_t)web_view->impl;
+    webview_eval(w, s_webview_deinit_js);
+    webview_terminate(w);
+    web_view_destroy_impl(widget);
+  }
+
   TKMEM_FREE(web_view->url);
   TKMEM_FREE(web_view->html);
 
@@ -189,10 +215,12 @@ static ret_t web_view_on_paint_self(widget_t* widget, canvas_t* c) {
 #endif
 
 static ret_t web_view_get_rect(widget_t* widget, rect_t* rect) {
+  point_t pos = {0, 0};
   return_value_if_fail(widget != NULL && rect != NULL, RET_BAD_PARAMS);
 
-  rect->x = widget->x;
-  rect->y = widget->y + NATIVE_WINDOW_TITLE_BAR_HEIGHT;
+  widget_to_global(widget, &pos);
+  rect->x = pos.x;
+  rect->y = pos.y + NATIVE_WINDOW_TITLE_BAR_HEIGHT;
   rect->w = widget->w;
   rect->h = widget->h;
 
@@ -207,11 +235,18 @@ static ret_t web_view_move_resize_webview(widget_t* widget) {
     void* os_window = webview_get_native_handle(w, WEBVIEW_NATIVE_HANDLE_KIND_UI_WINDOW);
 
     web_view_get_rect(widget, &rect);
-    webview_os_window_move_resize(widget, os_window, rect.x, rect.y, rect.w,
-                                  rect.h);
+    webview_os_window_move_resize(widget, os_window, rect.x, rect.y, rect.w, rect.h);
   }
 
   return RET_OK;
+}
+
+static ret_t web_view_destroy_impl_async(const timer_info_t* info) {
+  widget_t* widget = WIDGET(info->ctx);
+
+  web_view_destroy_impl(widget);
+
+  return RET_REMOVE;
 }
 
 static ret_t web_view_destroy_impl(widget_t* widget) {
@@ -239,7 +274,7 @@ static ret_t web_view_create_impl(widget_t* widget) {
   os_window = webview_os_window_create(widget, rect.x, rect.y, rect.w, rect.h);
 
   w = webview_create(0, os_window);
-  webview_init(w, s_hook_click);
+  webview_init(w, s_webview_init_js);
 
   web_view->impl = w;
   if (TK_STR_IS_NOT_EMPTY(web_view->url)) {
@@ -257,18 +292,30 @@ static ret_t web_view_create_impl(widget_t* widget) {
   return RET_OK;
 }
 
+static ret_t web_view_hook_events(widget_t* widget) {
+  widget_t* window = widget_get_window(widget);
+  widget_t* pages = widget_find_parent_by_type(widget, WIDGET_TYPE_PAGES);
+
+  if (window != NULL) {
+    widget_on(window, EVT_WINDOW_TO_BACKGROUND, web_view_on_window_to_background, widget);
+    widget_on(window, EVT_WINDOW_TO_FOREGROUND, web_view_on_window_to_foreground, widget);
+  }
+
+  if (pages != NULL) {
+    web_view_set_active_if_is_current_page(widget);
+    widget_on(pages, EVT_PAGE_CHANGED, web_view_on_pages_changed, widget);
+  }
+
+  return RET_OK;
+}
 static ret_t web_view_on_event(widget_t* widget, event_t* e) {
   web_view_t* web_view = WEB_VIEW(widget);
   return_value_if_fail(widget != NULL && web_view != NULL, RET_BAD_PARAMS);
 
   switch (e->type) {
     case EVT_WINDOW_OPEN: {
-      widget_t* window = widget_get_window(widget);
       web_view_create_impl(widget);
-      if (window != NULL) {
-        widget_on(window, EVT_WINDOW_TO_BACKGROUND, web_view_on_window_to_background, widget);
-        widget_on(window, EVT_WINDOW_TO_FOREGROUND, web_view_on_window_to_foreground, widget);
-      }
+      web_view_hook_events(widget);
       break;
     }
     case EVT_MOVE_RESIZE:
