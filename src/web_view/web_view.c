@@ -67,8 +67,9 @@ static ret_t web_view_set_active(widget_t* widget, bool_t value) {
 static ret_t web_view_set_active_if_is_current_page(widget_t* widget) {  
   widget_t* my_page = NULL;
   widget_t* current_page = NULL;
+  web_view_t* web_view = WEB_VIEW(widget);
   widget_t* pages = widget_find_parent_by_type(widget, WIDGET_TYPE_PAGES);
-  return_value_if_fail(widget != NULL && pages != NULL, RET_BAD_PARAMS);
+  return_value_if_fail(web_view != NULL && pages != NULL, RET_BAD_PARAMS);
 
   my_page = widget->parent;
   while (my_page != NULL && my_page->parent != pages) {
@@ -77,6 +78,10 @@ static ret_t web_view_set_active_if_is_current_page(widget_t* widget) {
 
   current_page = widget_get_child(pages, PAGES(pages)->active);
   if (my_page == current_page) {
+    if (web_view->impl == NULL) {
+      web_view_create_impl(widget);
+    }
+
     web_view_set_active(widget, TRUE);
   } else {
     web_view_set_active(widget, FALSE);
@@ -210,6 +215,8 @@ static ret_t web_view_on_paint_self(widget_t* widget, canvas_t* c) {
 
 #ifdef WIN32
 #define NATIVE_WINDOW_TITLE_BAR_HEIGHT 36
+#elif defined(LINUX)
+#define NATIVE_WINDOW_TITLE_BAR_HEIGHT 34
 #else
 #define NATIVE_WINDOW_TITLE_BAR_HEIGHT 30
 #endif
@@ -292,18 +299,20 @@ static ret_t web_view_create_impl(widget_t* widget) {
   return RET_OK;
 }
 
-static ret_t web_view_hook_events(widget_t* widget) {
+static ret_t web_view_init(widget_t* widget) {
   widget_t* window = widget_get_window(widget);
   widget_t* pages = widget_find_parent_by_type(widget, WIDGET_TYPE_PAGES);
-
-  if (window != NULL) {
-    widget_on(window, EVT_WINDOW_TO_BACKGROUND, web_view_on_window_to_background, widget);
-    widget_on(window, EVT_WINDOW_TO_FOREGROUND, web_view_on_window_to_foreground, widget);
-  }
 
   if (pages != NULL) {
     web_view_set_active_if_is_current_page(widget);
     widget_on(pages, EVT_PAGE_CHANGED, web_view_on_pages_changed, widget);
+  } else {
+    web_view_create_impl(widget);
+  }
+  
+  if (window != NULL) {
+    widget_on(window, EVT_WINDOW_TO_BACKGROUND, web_view_on_window_to_background, widget);
+    widget_on(window, EVT_WINDOW_TO_FOREGROUND, web_view_on_window_to_foreground, widget);
   }
 
   return RET_OK;
@@ -314,8 +323,7 @@ static ret_t web_view_on_event(widget_t* widget, event_t* e) {
 
   switch (e->type) {
     case EVT_WINDOW_OPEN: {
-      web_view_create_impl(widget);
-      web_view_hook_events(widget);
+      web_view_init(widget);
       break;
     }
     case EVT_MOVE_RESIZE:
